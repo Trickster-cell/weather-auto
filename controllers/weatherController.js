@@ -4,6 +4,7 @@ const {
   getWeatherData,
   convertTemperature,
 } = require("../utils/getWeatherData");
+const { redis } = require("../utils/redis");
 
 // Fetch weather data and store it in the database
 const cities = [
@@ -38,6 +39,19 @@ const fetchWeatherAndStore = async () => {
           windSpeed,
         ]
       );
+      const cacheKey = `weather:${city}`;
+      const cacheValue = JSON.stringify({
+        temperature,
+        feelsLike,
+        condition,
+        timestamp,
+        humidity,
+        windSpeed,
+      });
+
+      // Set the cache value with an expiration time (e.g., 1 hour)
+      await redis.set(cacheKey, cacheValue, "EX", 3600);
+      console.log("Cache set successfully");
     }
     console.log("Weather data fetched and stored successfully");
   } catch (error) {
@@ -45,25 +59,19 @@ const fetchWeatherAndStore = async () => {
   }
 };
 
-const deleteWeatherDataForYesterday = async (req, res) => {
+const deleteWeatherDataForYesterday = async () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1); // Go back one day
   const dateString = yesterday.toISOString().split("T")[0]; // Format as YYYY-MM-DD
 
   try {
     const result = await pool.query(
-      "DELETE FROM weather_data WHERE DATE(timestamp) = $1",
+      "DELETE FROM weather_data WHERE DATE(TO_TIMESTAMP(timestamp)) <= $1",
       [dateString]
     );
-
-    if (result.rowCount > 0) {
-      res.status(200).json({ message: `Weather data for ${dateString} deleted successfully` });
-    } else {
-      res.status(404).json({ message: `No data found for ${dateString}` });
-    }
+    console.log(`Deleted ${result.rowCount} records for yesterday's weather data.`);
   } catch (error) {
     console.error("Error deleting weather data:", error);
-    res.status(500).json({ message: "An error occurred while deleting data" });
   }
 };
 
@@ -131,6 +139,11 @@ const calculateAndStoreDailySummary = async () => {
         console.log(`No weather data found for ${city} today.`);
       }
     }
+
+    // Call deletion function after processing all cities
+    await deleteWeatherDataForYesterday();
+    console.log("Deleted yesterday's weather data.");
+
   } catch (error) {
     console.error("Failed to calculate and store daily summaries:", error);
   }
