@@ -34,6 +34,9 @@ cron.schedule("0 0 * * *", () => {
   calculateAndStoreDailySummary();
 });
 // check daily summary every midnight
+app.get("/", (req, res) => {
+  res.send("Auto Weather");
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
