@@ -45,6 +45,28 @@ const fetchWeatherAndStore = async () => {
   }
 };
 
+const deleteWeatherDataForYesterday = async (req, res) => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1); // Go back one day
+  const dateString = yesterday.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM weather_data WHERE DATE(timestamp) = $1",
+      [dateString]
+    );
+
+    if (result.rowCount > 0) {
+      res.status(200).json({ message: `Weather data for ${dateString} deleted successfully` });
+    } else {
+      res.status(404).json({ message: `No data found for ${dateString}` });
+    }
+  } catch (error) {
+    console.error("Error deleting weather data:", error);
+    res.status(500).json({ message: "An error occurred while deleting data" });
+  }
+};
+
 const calculateAndStoreDailySummary = async () => {
   try {
     for (const city of cities) {
