@@ -69,7 +69,9 @@ const deleteWeatherDataForYesterday = async () => {
       "DELETE FROM weather_data WHERE DATE(TO_TIMESTAMP(timestamp)) <= $1",
       [dateString]
     );
-    console.log(`Deleted ${result.rowCount} records for yesterday's weather data.`);
+    console.log(
+      `Deleted ${result.rowCount} records for yesterday's weather data.`
+    );
   } catch (error) {
     console.error("Error deleting weather data:", error);
   }
@@ -143,7 +145,6 @@ const calculateAndStoreDailySummary = async () => {
     // Call deletion function after processing all cities
     await deleteWeatherDataForYesterday();
     console.log("Deleted yesterday's weather data.");
-
   } catch (error) {
     console.error("Failed to calculate and store daily summaries:", error);
   }
@@ -173,69 +174,51 @@ const dailyManual = async (req, res) => {
 
 const alertCheck = async () => {
   console.log("alert checking...");
-  const { rows: thresholds } = await pool.query(
-    "SELECT * FROM alert_thresholds"
-  );
 
   for (const city of cities) {
+    const { rows: thresholds } = await pool.query(
+      "SELECT * FROM alert_thresholds WHERE city = $1",
+      [city]
+    );
+
     // Fetch the latest weather data for the city from the weather API
     const data = await getWeatherData(city);
     const temperature = convertTemperature(data.main.temp);
-    const feels_like = convertTemperature(data.main.feels_like);
-    const condition = data.weather[0].main;
     const humidity = data.main.humidity;
     const wind_speed = data.wind.speed;
 
     // Find the threshold for the current city
-    const threshold = thresholds.find((t) => t.city === city);
-
-    if (threshold) {
+    for (const threshold of thresholds) {
       const {
-        max_temp,
+        user_email,
         min_temp,
-        condition: alertCondition,
-        max_humidity,
+        max_temp,
         min_humidity,
-        max_wind_speed,
+        max_humidity,
         min_wind_speed,
+        max_wind_speed,
       } = threshold;
-
-      // Check if the current weather data falls within the alert range
       const isTemperatureOutOfRange =
         temperature > max_temp || temperature < min_temp;
-      const isConditionAlert = condition === alertCondition;
       const isHumidityExceeded =
         humidity > max_humidity || humidity < min_humidity;
       const isWindSpeedExceeded =
         wind_speed > max_wind_speed || wind_speed < min_wind_speed;
 
-      // Trigger alert if the conditions are met
       if (
         isTemperatureOutOfRange ||
-        isConditionAlert ||
         isHumidityExceeded ||
         isWindSpeedExceeded
       ) {
-        alertFunction(city, temperature, condition, humidity, wind_speed);
-        // console.log(`alert ${city}, ${temperature}, ${condition}`);
+        console.log(`Alert for ${user_email}`);
+        alertFunction(user_email, city, temperature, humidity, wind_speed);
+      } else {
+        console.log(`No Alert for ${user_email}`);
       }
     }
-
-    // Insert weather data into the database
-    const timestamp = data.dt;
-    await pool.query(
-      "INSERT INTO weather_data (city, temperature, feels_like, condition, timestamp, humidity, wind_speed) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-      [
-        city,
-        temperature,
-        feels_like,
-        condition,
-        timestamp,
-        humidity,
-        wind_speed,
-      ]
-    );
   }
+
+  // Insert weather data into the database
 };
 
 const fetchWeatherAndCheckAlerts = async (req, res) => {
