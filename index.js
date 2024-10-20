@@ -27,7 +27,7 @@ setInterval(alertCheck, 3 * 60 * 60 * 1000);
 
 // Initial call
 // fetchWeatherAndStore();
-// alertCheck();
+alertCheck();
 
 cron.schedule("0 0 * * *", () => {
   console.log("Running daily summary calculation...");
