@@ -81,7 +81,9 @@ const calculateAndStoreDailySummary = async () => {
   try {
     for (const city of cities) {
       // SQL query to calculate the daily summary in one go
-      const today = new Date().toISOString().split("T")[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const today = yesterday.toISOString().split("T")[0];
       const { rows: summary } = await pool.query(
         `SELECT 
                       AVG(temperature) AS avg_temp, 
