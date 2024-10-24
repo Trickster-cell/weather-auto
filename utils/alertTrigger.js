@@ -1,4 +1,4 @@
-const amqp = require("amqplib");
+const amqp = require("amqp-connection-manager");
 const pool = require("../db");
 require("dotenv").config();
 
@@ -27,8 +27,14 @@ const alertFunction = async (
   };
 
   // Publish the message to the RabbitMQ queue
+  const host = [
+    "amqp://localhost:5672",
+    "amqp://localhost:5673",
+    "amqp://localhost:5674",
+  ];
+
   try {
-    const connection = await amqp.connect(process.env.RABBIT_MQ_URL); // Connect to RabbitMQ
+    const connection = await amqp.connect(process.env.RABBIT_MQ_URL || host); // Connect to RabbitMQ
     const channel = await connection.createChannel();
     const queue = "email_alerts";
 
