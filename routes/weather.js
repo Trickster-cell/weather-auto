@@ -2,11 +2,13 @@ const express = require('express');
 const { fetchManual, dailyManual, fetchWeatherAndCheckAlerts } = require('../controllers/weatherController');
 const router = express.Router();
 
-// Fetch weather data route
+// Route to fetch weather data manually
 router.get('/fetch', fetchManual);
 
-router.get('/fetch-daily', dailyManual)
+// Route for daily manual weather data fetch
+router.get('/fetch-daily', dailyManual);
 
-router.get('/alert-check', fetchWeatherAndCheckAlerts)
+// Route to check alerts based on weather data
+router.get('/alert-check', fetchWeatherAndCheckAlerts);
 
 module.exports = router;
