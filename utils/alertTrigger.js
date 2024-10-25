@@ -34,14 +34,14 @@ const alertFunction = async (
   ];
 
   const connreq = [process.env.RABBIT_MQ_URL] || host;
-  console.log(connreq)
+  // console.log(connreq);
 
   try {
     const connection = await amqp.connect(connreq); // Connect to RabbitMQ
-    const channelWrapper  = await connection.createChannel({
+    const channelWrapper = await connection.createChannel({
       json: true,
       setup: function (channel) {
-        return channel.assertQueue('email_alerts', { durable: true });
+        return channel.assertQueue("email_alerts", { durable: true });
       },
     });
     const queue = "email_alerts";
@@ -50,16 +50,18 @@ const alertFunction = async (
     // channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
     //   persistent: true,
     // }); // Send the message
+    // console.log((message));
+    channelWrapper
+      .sendToQueue(queue, (message))
+      .then(function () {
+        return console.log(`Alert message sent to queue for ${city}`);
+      })
+      .catch(function (err) {
+        return console.log("Message was rejected...  Boo!", err);
+      });
 
-    channelWrapper.sendToQueue(queue, Buffer.from(JSON.stringify(message))).then(function (){
-      return console.log(`Alert message sent to queue for ${city}`);
-    }).catch(function (err) {
-      return console.log('Message was rejected...  Boo!');
-    });
-
-    
-    await channel.close(); // Close the channel
-    await connection.close(); // Close the connection
+    // await channel.close(); // Close the channel
+    // await connection.close(); // Close the connection
   } catch (error) {
     console.error("Error sending alert message to RabbitMQ:", error);
   }
